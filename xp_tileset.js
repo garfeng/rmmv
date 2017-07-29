@@ -652,10 +652,15 @@ Sprite_Character.prototype.updateCharacterFrame = function() {
   } else {
     //var ph2 = -this._character.shiftY() + this.parent._tileHeight + (this._character._realY - Math.ceil(this._character._realY)) * this.parent._tileHeight;
     //var sy2 = sy + ph - ph2;
-    var ph2 = -this._character.shiftY() + this.parent._tileHeight;
-    var sy2 = sy + ph - ph2;
-    //this.setFrame(sx, Math.max(sy2,sy) , pw, Math.min(ph,ph2));
-    this.setFrame(sx, sy, pw, ph);
+    if (!this._character.isObjectCharacter() && this._character.screenZ() == 3) {
+      var ph2 = -this._character.shiftY() + this.parent._tileHeight;
+      var sy2 = sy + ph - ph2;
+      //this.setFrame(sx, Math.max(sy2,sy) , pw, Math.min(ph,ph2));
+      this.setFrame(sx, sy2, pw, ph2);
+    } else {
+      this.setFrame(sx, sy, pw, ph);
+    }
+
   }
   this.updateAllUppers();
 };
