@@ -97,7 +97,6 @@ Tilemap.prototype._createLayers = function() {
 
 Tilemap.prototype._upperIndex = function(tileId) {
   //var flags = $gameMap.tilesetFlags();
-  //console.log(flags)
   var tag = this.flags[tileId] >> 12;
   if (typeof TAGS_Z_MAP[tag] != "undefined") {
     if (TAGS_Z_MAP[tag] > 0) {
@@ -637,6 +636,7 @@ Sprite_Character.prototype.initialize = function(character) {
   this.setCharacter(character);
 };
 
+
 Sprite_Character.prototype.updateCharacterFrame = function() {
   var pw = this.patternWidth();
   var ph = this.patternHeight();
@@ -653,7 +653,7 @@ Sprite_Character.prototype.updateCharacterFrame = function() {
     //var ph2 = -this._character.shiftY() + this.parent._tileHeight + (this._character._realY - Math.ceil(this._character._realY)) * this.parent._tileHeight;
     //var sy2 = sy + ph - ph2;
     if (!this._character.isObjectCharacter() && this._character.screenZ() == 3) {
-      var ph2 = -this._character.shiftY() + this.parent._tileHeight;
+      var ph2 = Math.min(-this._character.shiftY() + this.parent._tileHeight, ph);
       var sy2 = sy + ph - ph2;
       //this.setFrame(sx, Math.max(sy2,sy) , pw, Math.min(ph,ph2));
       this.setFrame(sx, sy2, pw, ph2);
@@ -668,7 +668,6 @@ Sprite_Character.prototype.updateCharacterFrame = function() {
 Sprite_Character.prototype.createUppers = function() {
   if (typeof this.allBodys == "object") {
     var tmp;
-    console.log("remove")
     while ((tmp = this.allBodys.pop()) != null) {
       this.parent.removeChild(tmp);
       tmp = null;
@@ -701,9 +700,7 @@ Sprite_Character.prototype.createUppers = function() {
     b.anchor.x = 0.5;
     b.anchor.y = 1;
     b.z = this._layerZIndex(i);
-    console.log(b.z)
-    b.visible = this.visible;
-    b.bitmap = this.bitmap;
+    b.bitmap = this.gf_LoadBitmap();
     b.bIndex = i;
     this.allBodys.push(b);
     this.parent.addChild(b);
@@ -712,12 +709,26 @@ Sprite_Character.prototype.createUppers = function() {
   b.anchor.x = 0.5;
   b.anchor.y = 1;
   b.z = 3.9;
-  b.visible = true;
-  b.bitmap = this.bitmap;
+  b.bitmap = this.gf_LoadBitmap();
   b.bIndex = num;
   this.allBodys.push(b);
   this.parent.addChild(b);
+  //this.updateAllUppersFrameSize();
+  /*
+   for (var i in this.allBodys) {
+     console.log(i);
+     this.parent.addChild(this.allBodys[i]);
+   }
+   */
 };
+
+Sprite_Character.prototype.gf_LoadBitmap = function() {
+  if (this._tileId > 0) {
+    return this.tilesetBitmap(this._tileId);
+  } else {
+    return ImageManager.loadCharacter(this._characterName);
+  }
+}
 
 /*
 Sprite_Character.prototype.hOfUpper = function (index){
@@ -731,6 +742,31 @@ Sprite_Character.prototype.hOfUpper = function (index){
 }
 */
 
+var GF_Update_bitmap = Sprite_Character.prototype.updateBitmap;
+
+Sprite_Character.prototype.updateBitmap = function() {
+  if (this.isImageChanged()) {
+    this._tilesetId = $gameMap.tilesetId();
+    this._tileId = this._character.tileId();
+    this._characterName = this._character.characterName();
+    this._characterIndex = this._character.characterIndex();
+    if (this._tileId > 0) {
+      this.setTileBitmap();
+    } else {
+      this.setCharacterBitmap();
+    }
+    this.createUppers();
+  } else if ((typeof this.allBodys == "undefined" && typeof this.UperBody == "undefined") || (this.oldShiftY != this._character.shiftY()) || (this.oldPatternHeight != this.patternHeight())) {
+    this.createUppers();
+  }
+
+  /*
+    if (typeof this.allBodys != "undefined" && this.allBodys.length > 0 && this._character.characterName() == "") {
+      this.createUppers();
+    }
+    */
+}
+
 Sprite_Character.prototype.updateAllUppers = function() {
   if (typeof this.oldShiftY == "undefined") {
     this.oldShiftY = this._character.shiftY();
@@ -738,6 +774,7 @@ Sprite_Character.prototype.updateAllUppers = function() {
   if (typeof this.oldPatternHeight == "undefined") {
     this.oldPatternHeight = 0;
   }
+  /*
   if ((typeof this.allBodys == "undefined" && typeof this.UperBody == "undefined") || (this.oldShiftY != this._character.shiftY()) || this.isImageChanged() || (this.oldPatternHeight != this.patternHeight())) {
     this.createUppers();
   }
@@ -745,6 +782,11 @@ Sprite_Character.prototype.updateAllUppers = function() {
   if (typeof this.allBodys != "undefined" && this.allBodys.length > 0 && this._character.characterName() == "") {
     this.createUppers();
   }
+  */
+  this.updateAllUppersFrameSize();
+};
+
+Sprite_Character.prototype.updateAllUppersFrameSize = function() {
   if (this.UperBody) {
     for (var i = 0; i < this.allBodys.length; i++) {
       var w = this.patternWidth();
@@ -770,18 +812,22 @@ Sprite_Character.prototype.updateAllUppers = function() {
       } else {
         var y = this._character.screenY();
         b.setFrame(sx, sy, w, h);
-        b.opacity = this.opacity * 0.15;
+        if ($gameSwitches.value(10)) {
+          b.opacity = this.opacity * 0.1;
+        } else {
+          b.opacity = 0;
+        }
+        //b.opacity = 255;
       }
 
       if (this._character.isTransparent()) {
         b.visible = false;
       }
-
       b.x = x;
       b.y = y;
-      b.bitmap = this.bitmap;
+      //b.bitmap = this.bitmap;
       b.setBlendColor(this.getBlendColor());
       b.setColorTone(this.getColorTone());
     }
   }
-};
+}
